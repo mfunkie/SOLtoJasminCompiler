@@ -2,246 +2,250 @@ def typeCheck(tree)
   if(tree.value == nil && tree.children[0] == nil)
     return "NULL"
   end
+
   if(tree.value == nil && tree.children[0].typeName == nil) 
      if(tree.children.length > 1)
        @@errorList << "Found statement, expected Operator"
        return nil
      end
      return typeCheck(tree.children[0])
-  else
-    if(tree.children[0].typeName == "Keyword" || 
-       tree.children[0].typeName == "Boolean" || 
-       tree.children[0].typeName == "Write"   ||
-       tree.children[0].typeName == "Variable")
-      if(tree.children[0].typeName == "Variable" && tree.children.size > 1)
-        ## DO NOTHING WE WILL HANDLE EVERYTHING HERE, IT IS A FUNCTION
-      else
-        return specialTypeCheck(tree)
-      end
-    end
-    if(@@symbolTable[tree.children[0].typeName] == nil && tree.children[0].typeName != "Variable")
-      @@errorList << "Found " + tree.children[0].typeName + " Expected Operator"
-      return nil
+  end
+
+  if(tree.children[0].typeName == "Keyword" || 
+     tree.children[0].typeName == "Boolean" || 
+     tree.children[0].typeName == "Write"   ||
+     tree.children[0].typeName == "Variable")
+    if(tree.children[0].typeName == "Variable" && tree.children.size > 1)
+      ## DO NOTHING WE WILL HANDLE EVERYTHING HERE, IT IS A FUNCTION
     else
-      lookupName = tree.children[0].value
-      i = 1
-      while(i < tree.children.size())
-        if(tree.children[i].value == nil)
-          type = typeCheck(tree.children[i]) 
-          tree.children[i].setReturnType(type)
-        else
-          type = tree.children[i].typeName
-          if(@@symbolTable["Code"][tree.children[i].typeName] != nil)
-            value = @@symbolTable["Code"][tree.children[i].typeName]["Value"]
-            code =  String.new(@@symbolTable["Code"][tree.children[i].typeName]["Code"])
-            if(value != nil)
-              ## SPECIAL BOOLEAN CASE
-              if(tree.children[i].typeName == "Boolean")
-                thisValue = tree.children[i].value == "true" ? 1 : 0
-                code.gsub!(/['X']/, thisValue.to_s)
-              else
-                code.gsub!(/['X']/, tree.children[i].value.to_s)
-              end
-            end
-            tree.children[i].setCode(code)
-          else
-            if(tree.children[i].typeName == "Variable")
-              codeAndType = varCheck(tree.children[i])
-              if(codeAndType == nil)
-                @@errorList << "Error: Variable or Function " + tree.children[i].value + " does not exist in this context."
-                return nil
-              end
-              type = codeAndType["type"]
-              if(codeAndType["loadCode"] == nil)
-                if(tree.children[0].value == ":=")
-                  # Bide our time, no code needs to be made
-                  type = "Function"
-                else  
-                  @@errorList << "Error: Incorrect Use of Function"
-                  return nil
-                end
-              else
-                code = String.new(codeAndType["loadCode"])
-                tree.children[i].setTypeName(type)
-                tree.children[i].setCode(code)
-                if(i == 1 && tree.children[0].value == ":=")
-                  storageType = codeAndType["storeCode"]
-                  loadingType = codeAndType["loadCode"]
-                end
-              end
+      return specialTypeCheck(tree)
+    end
+  end
+
+  if(@@symbolTable[tree.children[0].typeName] == nil && tree.children[0].typeName != "Variable")
+    @@errorList << "Found " + tree.children[0].typeName + " Expected Operator"
+    return nil
+  else
+    lookupName = tree.children[0].value
+    i = 1
+    while(i < tree.children.size())
+      if(tree.children[i].value == nil)
+        type = typeCheck(tree.children[i]) 
+        tree.children[i].setReturnType(type)
+      else
+        type = tree.children[i].typeName
+        if(@@symbolTable["Code"][tree.children[i].typeName] != nil)
+          value = @@symbolTable["Code"][tree.children[i].typeName]["Value"]
+          code =  String.new(@@symbolTable["Code"][tree.children[i].typeName]["Code"])
+          if(value != nil)
+            ## SPECIAL BOOLEAN CASE
+            if(tree.children[i].typeName == "Boolean")
+              thisValue = tree.children[i].value == "true" ? 1 : 0
+              code.gsub!(/['X']/, thisValue.to_s)
             else
-              @@errorList << "Error: No code for " + tree.children[i].typeName
+              code.gsub!(/['X']/, tree.children[i].value.to_s)
+            end
+          end
+          tree.children[i].setCode(code)
+        else
+          if(tree.children[i].typeName == "Variable")
+            codeAndType = varCheck(tree.children[i])
+            if(codeAndType == nil)
+              @@errorList << "Error: Variable or Function " + tree.children[i].value + " does not exist in this context."
               return nil
             end
+            type = codeAndType["type"]
+            if(codeAndType["loadCode"] == nil)
+              if(tree.children[0].value == ":=")
+                # Bide our time, no code needs to be made
+                type = "Function"
+              else  
+                @@errorList << "Error: Incorrect Use of Function"
+                return nil
+              end
+            else
+              code = String.new(codeAndType["loadCode"])
+              tree.children[i].setTypeName(type)
+              tree.children[i].setCode(code)
+              if(i == 1 && tree.children[0].value == ":=")
+                storageType = codeAndType["storeCode"]
+                loadingType = codeAndType["loadCode"]
+              end
+            end
+          else
+            @@errorList << "Error: No code for " + tree.children[i].typeName
+            return nil
           end
         end
-        if(type == nil)
-          @@errorList << "Error in Subtree: Returning Error"
-          return nil
+      end
+      if(type == nil)
+        @@errorList << "Error in Subtree: Returning Error"
+        return nil
+      end
+      lookupName += type
+      i += 1
+    end
+    if(lookupName == ":=FunctionFunction")
+      functName = tree.children[1].value
+      codeAndType1 = varCheck(tree.children[1])
+      codeAndType2 = varCheck(tree.children[2])
+      levelOfFunct = codeAndType1["currentLevel"].to_i
+      if(codeAndType1["signature"] != codeAndType2["signature"])
+        @@errorList << "Functions signatures do not match, cannot assign"
+        return nil
+      else
+        oldArguments =String.new(codeAndType1["arguments"])
+        @@variableTable[levelOfFunct][functName] = Hash.new(codeAndType2)
+        #I hate ruby's quirks
+        @@variableTable[levelOfFunct][functName] = @@variableTable[levelOfFunct][functName]["ANYTHINGCANGOHERE"]
+        ## For calling function need new argument "signature"
+        @@variableTable[levelOfFunct][functName]["arguments"]=String.new(oldArguments)
+        tree.children[0].setCode("")
+        tree.children[1].setCode("")
+        tree.children[2].setCode("")
+        return "Function"
+      end
+    end
+    if(tree.children[0].typeName == "Variable")
+      thisFunction = varCheck(tree.children[0])
+      if(thisFunction == nil)
+        @@errorList << "Error: Function " + tree.children[0].value + " does not exist in this context."
+        return nil
+      end
+      returnType = thisFunction["type"] #code is under call
+      if(thisFunction["call"] == nil)
+        @@errorList << "Found Variable, Expected Function"
+        return nil
+      end
+      tree.children[0].setCode(thisFunction["call"])
+      if(lookupName != thisFunction["arguments"])
+        @@errorList << "Incorrect arguments for function"
+        @@errorList << "Found: "+lookupName
+        @@errorList << "Expected: "+thisFunction["arguments"]
+        return nil
+      end
+    else
+      returnType = @@symbolTable[tree.children[0].typeName][lookupName]
+    end
+    #Unary Minus
+    if(lookupName == "+Integer" || lookupName == "-Integer" ||
+       lookupName == "+Float"   || lookupName == "-Float")
+       oldCode = tree.children[1].Code
+       loadType = tree.children[1].typeName == "Integer" ? "ldc 0" : "ldc 0.0"
+       newCode = loadType + "\n\t" + oldCode
+       tree.children[1].setCode(newCode)
+     end
+    
+    #Set conversion codes
+    if(returnType == nil)
+      @@errorList << "Return Type is Nil, Returning Error"
+      @@errorList << "No Rule for " + lookupName
+      return returnType
+    else
+      tree.setTypeName(returnType)
+      codeType = "" + tree.children[0].value + tree.typeName
+      
+      #### SPECIAL BOOLEAN CASE ####
+      if(returnType == "Boolean")
+        boolCode = @@symbolTable["BooleanCode"][lookupName]
+        boolCode += @@symbolTable["BooleanCode"]["Default"]
+        thisBoolCode = String.new(boolCode)
+        ## Set Labels Unique
+        thisBoolCode.gsub!(/['X']/, @@labelCounter.to_s)
+        @@labelCounter += 1
+        thisBoolCode.gsub!(/['Y']/, @@labelCounter.to_s)
+        @@labelCounter += 1
+        thisBoolCode.gsub!(/['Z']/, @@labelCounter.to_s)
+        @@labelCounter += 1
+        if(tree.children[0].typeName == "Variable")
+          thisBoolCode = tree.children[0].Code + "\n\t" + thisBoolCode
         end
-        lookupName += type
+        tree.children[0].setCode(thisBoolCode)
+      else
+        if(storageType != nil)  # := case
+          tree.children[1].setCode("")
+          tree.children[0].setCode(storageType)
+          tree.setCode(loadingType)
+        else
+          if(tree.children[0].typeName != "Variable")
+            if(@@symbolTable["Code"][codeType] != nil)
+              tree.children[0].setCode(@@symbolTable["Code"][codeType])
+            else
+              @@errorList << "Error: No Code found for " + codeType
+              @@errorList << "Attempted assignment without variable"
+            end
+          end
+        end
+      end
+    end
+    i = 1
+    
+    ## Special rules for ^ because it only takes doubles but we want to return float
+    if(returnType != "Boolean" and tree.children[0].typeName != "Variable")
+      while(i < tree.children.size())
+        if( tree.children[0].value == "^")
+          conversion = tree.children[i].typeName + "Double"
+          codeAdd = @@symbolTable["Conversion"][conversion]
+          if(tree.children[i].Code != nil)
+            newCode = tree.children[i].Code + "\n" + "\t" + codeAdd
+          else
+            newCode = codeAdd
+          end
+          tree.children[i].setCode(newCode)
+        elsif( tree.children[i].typeName != tree.typeName && tree.typeName != "String")
+          conversion = tree.children[i].typeName + tree.typeName
+          codeAdd = @@symbolTable["Conversion"][conversion]
+          if(tree.children[i].Code != nil)
+            newCode = tree.children[i].Code + "\n" + "\t" + codeAdd
+          else
+            newCode = codeAdd
+          end
+          tree.children[i].setCode(newCode)
+        end
         i += 1
       end
-      if(lookupName == ":=FunctionFunction")
-        functName = tree.children[1].value
-        codeAndType1 = varCheck(tree.children[1])
-        codeAndType2 = varCheck(tree.children[2])
-        levelOfFunct = codeAndType1["currentLevel"].to_i
-        if(codeAndType1["signature"] != codeAndType2["signature"])
-          @@errorList << "Functions signatures do not match, cannot assign"
-          return nil
-        else
-          oldArguments =String.new(codeAndType1["arguments"])
-          @@variableTable[levelOfFunct][functName] = Hash.new(codeAndType2)
-          #I hate ruby's quirks
-          @@variableTable[levelOfFunct][functName] = @@variableTable[levelOfFunct][functName]["ANYTHINGCANGOHERE"]
-          ## For calling function need new argument "signature"
-          @@variableTable[levelOfFunct][functName]["arguments"]=String.new(oldArguments)
-          tree.children[0].setCode("")
-          tree.children[1].setCode("")
-          tree.children[2].setCode("")
-          return "Function"
-        end
-      end
-      if(tree.children[0].typeName == "Variable")
-        thisFunction = varCheck(tree.children[0])
-        if(thisFunction == nil)
-          @@errorList << "Error: Function " + tree.children[0].value + " does not exist in this context."
-          return nil
-        end
-        returnType = thisFunction["type"] #code is under call
-        if(thisFunction["call"] == nil)
-          @@errorList << "Found Variable, Expected Function"
-          return nil
-        end
-        tree.children[0].setCode(thisFunction["call"])
-        if(lookupName != thisFunction["arguments"])
-          @@errorList << "Incorrect arguments for function"
-          @@errorList << "Found: "+lookupName
-          @@errorList << "Expected: "+thisFunction["arguments"]
-          return nil
-        end
-      else
-        returnType = @@symbolTable[tree.children[0].typeName][lookupName]
-      end
-      #Unary Minus
-      if(lookupName == "+Integer" || lookupName == "-Integer" ||
-         lookupName == "+Float"   || lookupName == "-Float")
-         oldCode = tree.children[1].Code
-         loadType = tree.children[1].typeName == "Integer" ? "ldc 0" : "ldc 0.0"
-         newCode = loadType + "\n\t" + oldCode
-         tree.children[1].setCode(newCode)
-       end
-      
-      #Set conversion codes
-      if(returnType == nil)
-        @@errorList << "Return Type is Nil, Returning Error"
-        @@errorList << "No Rule for " + lookupName
-        return returnType
-      else
-        tree.setTypeName(returnType)
-        codeType = "" + tree.children[0].value + tree.typeName
-        
-        #### SPECIAL BOOLEAN CASE ####
-        if(returnType == "Boolean")
-          boolCode = @@symbolTable["BooleanCode"][lookupName]
-          boolCode += @@symbolTable["BooleanCode"]["Default"]
-          thisBoolCode = String.new(boolCode)
-          ## Set Labels Unique
-          thisBoolCode.gsub!(/['X']/, @@labelCounter.to_s)
-          @@labelCounter += 1
-          thisBoolCode.gsub!(/['Y']/, @@labelCounter.to_s)
-          @@labelCounter += 1
-          thisBoolCode.gsub!(/['Z']/, @@labelCounter.to_s)
-          @@labelCounter += 1
-          if(tree.children[0].typeName == "Variable")
-            thisBoolCode = tree.children[0].Code + "\n\t" + thisBoolCode
-          end
-          tree.children[0].setCode(thisBoolCode)
-        else
-          if(storageType != nil)  # := case
-            tree.children[1].setCode("")
-            tree.children[0].setCode(storageType)
-            tree.setCode(loadingType)
-          else
-            if(tree.children[0].typeName != "Variable")
-              if(@@symbolTable["Code"][codeType] != nil)
-                tree.children[0].setCode(@@symbolTable["Code"][codeType])
-              else
-                @@errorList << "Error: No Code found for " + codeType
-                @@errorList << "Attempted assignment without variable"
-              end
-            end
-          end
-        end
-      end
-      i = 1
-      
-      ## Special rules for ^ because it only takes doubles but we want to return float
-      if(returnType != "Boolean" and tree.children[0].typeName != "Variable")
-        while(i < tree.children.size())
-          if( tree.children[0].value == "^")
-            conversion = tree.children[i].typeName + "Double"
-            codeAdd = @@symbolTable["Conversion"][conversion]
-            if(tree.children[i].Code != nil)
-              newCode = tree.children[i].Code + "\n" + "\t" + codeAdd
+    elsif(tree.children.size == 3 and tree.children[0].typeName != "Variable")
+      child1 = tree.children[1]
+      child2 = tree.children[2]
+      childLookup = child1.typeName + child2.typeName
+      if(@@symbolTable["BoolConversion"][childLookup] != nil)
+        if(lookupName == "&IntegerInteger" || lookupName == "|IntegerInteger" || childLookup != "IntegerInteger")
+          child1Change = @@symbolTable["BoolConversion"][childLookup]["child1"]
+          if(child1Change != nil)
+            if(child1.Code != nil)
+              newCode = String.new(child1.Code + "\n" + "\t" + child1Change)
             else
-              newCode = codeAdd
+              newCode = String.new(child1Change)
             end
-            tree.children[i].setCode(newCode)
-          elsif( tree.children[i].typeName != tree.typeName && tree.typeName != "String")
-            conversion = tree.children[i].typeName + tree.typeName
-            codeAdd = @@symbolTable["Conversion"][conversion]
-            if(tree.children[i].Code != nil)
-              newCode = tree.children[i].Code + "\n" + "\t" + codeAdd
-            else
-              newCode = codeAdd
-            end
-            tree.children[i].setCode(newCode)
+            newCode.gsub!(/['X']/, @@labelCounter.to_s)
+            @@labelCounter += 1
+            newCode.gsub!(/['Y']/, @@labelCounter.to_s)
+            @@labelCounter += 1
+            newCode.gsub!(/['Z']/, @@labelCounter.to_s)
+            @@labelCounter += 1
+            child1.setCode(newCode)
           end
-          i += 1
-        end
-      elsif(tree.children.size == 3 and tree.children[0].typeName != "Variable")
-        child1 = tree.children[1]
-        child2 = tree.children[2]
-        childLookup = child1.typeName + child2.typeName
-        if(@@symbolTable["BoolConversion"][childLookup] != nil)
-          if(lookupName == "&IntegerInteger" || lookupName == "|IntegerInteger" || childLookup != "IntegerInteger")
-            child1Change = @@symbolTable["BoolConversion"][childLookup]["child1"]
-            if(child1Change != nil)
-              if(child1.Code != nil)
-                newCode = String.new(child1.Code + "\n" + "\t" + child1Change)
-              else
-                newCode = String.new(child1Change)
-              end
-              newCode.gsub!(/['X']/, @@labelCounter.to_s)
-              @@labelCounter += 1
-              newCode.gsub!(/['Y']/, @@labelCounter.to_s)
-              @@labelCounter += 1
-              newCode.gsub!(/['Z']/, @@labelCounter.to_s)
-              @@labelCounter += 1
-              child1.setCode(newCode)
+          child2Change = @@symbolTable["BoolConversion"][childLookup]["child2"]
+          if(child2Change != nil)
+            if(child2.Code != nil)
+              newCode = String.new(child2.Code + "\n" + "\t" + child2Change)
+            else
+              newCode = String.new(child2Change)
             end
-            child2Change = @@symbolTable["BoolConversion"][childLookup]["child2"]
-            if(child2Change != nil)
-              if(child2.Code != nil)
-                newCode = String.new(child2.Code + "\n" + "\t" + child2Change)
-              else
-                newCode = String.new(child2Change)
-              end
-              newCode.gsub!(/['X']/, @@labelCounter.to_s)
-              @@labelCounter += 1
-              newCode.gsub!(/['Y']/, @@labelCounter.to_s)
-              @@labelCounter += 1
-              newCode.gsub!(/['Z']/, @@labelCounter.to_s)
-              @@labelCounter += 1
-              child2.setCode(newCode)
-            end
+            newCode.gsub!(/['X']/, @@labelCounter.to_s)
+            @@labelCounter += 1
+            newCode.gsub!(/['Y']/, @@labelCounter.to_s)
+            @@labelCounter += 1
+            newCode.gsub!(/['Z']/, @@labelCounter.to_s)
+            @@labelCounter += 1
+            child2.setCode(newCode)
           end
         end
       end
-      return returnType
     end
+
+    return returnType
+
   end
 end
 
