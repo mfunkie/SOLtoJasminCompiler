@@ -1,0 +1,127 @@
+; Testing
+
+; Simple Case
+[writestring stdout "Simple Case - add function"]
+[let [: [add [: x int] [: y int]] int] 
+ [begin
+  [writestring stdout "Adding two integers together using created function - add"]
+	[+ x y]
+	end
+ ]
+]
+[writeint stdout [add 1 2 ]]
+
+;Block Code Testing
+[writestring stdout "\nBlock Code Testing - Function called in block"]
+[let [: [secondAdd [: x float] [: y float]] float] 
+ [begin
+  [writestring stdout "Adding two floats together where function only exists in code block"]
+	[+ x y]
+	end
+ ]
+ [writefloat stdout [secondAdd 3.0 4.0 ]]
+]
+
+;Void testing
+[writestring stdout "\nVoid Testing"]
+[let [: [connectDots] void] 
+ [begin
+  [writestring stdout "I'm a void function!"]
+	end
+ ]
+]
+[connectDots]
+
+;Using Factorial for Recursive Testing
+[writestring stdout "\nUsing Factorial for Recursive Testing"]
+[writestring stdout "
+[let [: [factorial [: number int]] int] 
+  [
+  begin
+   [if [<= number 1]
+    [+ 1 0]
+    [* number [factorial [- number 1]]]
+   ]
+  end
+ ]
+]"]
+[let [: [factorial [: number int]] int] 
+ 	[
+  begin
+		[if [<= number 1]
+			[+ 1 0]
+			[* number [factorial [- number 1]]]
+		]
+	end
+  ]
+]
+[writestring stdout "Testing statement \n[writeint stdout [factorial 4]]"]
+[writeint stdout [factorial 4]]
+[writestring stdout "\nMore Recursive Testing with Fibonacci Numbers"]
+[writestring stdout "
+[let [: [fibonacci [: n int]] int]
+  [if [| [= n 1] [= n 2]]
+   [+ 1 0]
+   [+ [fibonacci [- n 1]] [fibonacci [- n 2]]]
+  ]
+]
+"]
+[let [: [fibonacci [: n int]] int]
+  [if [| [= n 1] [= n 2]]
+   [+ 1 0]
+   [+ [fibonacci [- n 1]] [fibonacci [- n 2]]]
+  ]
+]
+[writestring stdout "The 7th Number in the Fibonacci Sequence is "]
+[writeint stdout [fibonacci 7]]
+
+
+
+;Function assignment
+[writestring stdout "\nTesting function assignment\n[let [: [newFactorial [: number int]] int] factorial]"]
+[let [: [newFactorial [: number int]] int] factorial]
+[writestring stdout "[writeint stdout [newFactorial 5]]"]
+[writeint stdout [newFactorial 5]]
+
+[writestring stdout "\nCreate a useless function, assign a function with same signature to it"]
+[writestring stdout "[let [: [bizarro [: number int]] int] 7]\n[:= bizarro newFactorial]"]
+[let [: [bizarro [: number int]] int] 7]
+[:= bizarro newFactorial]
+[writestring stdout "Now Call it\n[writeint stdout [bizarro 5]]"]
+[writeint stdout [bizarro 5]]
+
+[writestring stdout "\n\nFunctions within Functions, also Pass by Value"]
+[writestring stdout "
+[let [: [function1 [: x int]] int]
+  [
+   begin
+   [let [: [function2 [: y int]] int]
+    [
+     begin
+     [+ 1 y]
+     end
+    ]
+   ]
+   [writeint stdout [function2 x]]
+   [+ 1 x]
+   end
+  ]
+]
+[writeint stdout [function1 9]]"]
+[let [: [function1 [: x int]] int]
+  [
+   begin
+   [let [: [function2 [: y int]] int]
+    [
+     begin
+     [+ 1 y]
+     end
+    ]
+   ]
+   [writeint stdout [function2 x]]
+   [+ 1 x]
+   end
+  ]
+]
+[writeint stdout [function1 9]]
+
