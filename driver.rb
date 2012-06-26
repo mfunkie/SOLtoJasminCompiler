@@ -1,7 +1,7 @@
 #!/usr/bin/ruby
-require 'parser'
-require 'typecheck'
-require 'codeGen'
+require './parser'
+require './typecheck'
+require './codeGen'
 
 def printPreTraversalTreeTypes(spaces, tree)
   if tree.value == nil

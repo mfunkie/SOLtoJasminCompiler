@@ -1,4 +1,4 @@
-require 'scanner'
+require './scanner'
 ## Grammar is 
 ## A' -> Aeof
 ## A  -> AA

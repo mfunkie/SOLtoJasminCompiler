@@ -1,5 +1,5 @@
 #!/usr/bin/ruby
-require 'datastructures'
+require './datastructures'
 def getToken(file)
   nextChar = file.getc
   if(nextChar == nil)
@@ -61,7 +61,7 @@ def getToken(file)
         prev = nextChar
         thisToken = scanNumber(file,prev)
         return thisToken
-      elsif (nextChar[0] >= 97 && nextChar[0] <= 122) || (nextChar[0] >= 65 && nextChar[0] <= 90) #ALPHA CODES LC then UC
+      elsif charIsUpperCaseLetter(nextChar[0]) || charIsLowerCaseLetter(nextChar[0]) #ALPHA CODES LC then UC
         prev = nextChar
         return scanName(file, prev)
       else
@@ -71,6 +71,14 @@ def getToken(file)
   end
   
   return token
+end
+
+def charIsUpperCaseLetter(letter)
+    (letter =~ /[A-Z]/) != nil
+end
+
+def charIsLowerCaseLetter(letter)
+    (letter =~ /[a-z]/) != nil
 end
 
 def scanOperator(file,prev)
@@ -221,8 +229,8 @@ def scanName(file,prev)
     return thisToken
   end
   pointer = pointer.chr
-  while((pointer[0] >= 97 && pointer[0] <= 122) || ## Lower Case
-        (pointer[0] >= 65 && pointer[0] <= 90)  || ## Upper Case
+  while(charIsLowerCaseLetter(pointer[0]) || ## Lower Case
+        charIsUpperCaseLetter(pointer[0]) || ## Upper Case
         (pointer == "_") || (pointer == "0") || (pointer.to_i > 0 && pointer.to_i <= 9))
     currentName += pointer
     pointer = file.getc
