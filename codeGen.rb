@@ -78,11 +78,15 @@ def generateFunctionCode(tree) #goes node 1 code, node 2 code, then node 0 code,
 end
 
 def generateWhileCode(tree)
+
   if(tree.value == nil && tree.children[0] == nil)
     return
   end
+
   i = 1
+
   while(i < tree.children.size())
+
     if(tree.children[i].value == nil)
       generateCode(tree.children[i]) 
       if(tree.children[i].Code != nil)
@@ -95,9 +99,11 @@ def generateWhileCode(tree)
     end
     i += 1
   end
+
   if(tree.children[0].value == "while")
     generateWhileCode(tree.children[1]) 
   end
+  
   if(tree.children.size != 1)
     code = String.new("\t" + tree.children[0].Code)
     #Some crazy hacks goin on to get rid of the rest of the label code
@@ -119,23 +125,22 @@ def generateWhileCode(tree)
 end
 
 def createJasminFile()
-  jasminFile = File.open(@@fileName, "w")
-  jasmineFile = ""
+
   @@code[0].gsub!(/['X']/, @@className)
   @@code[3].gsub!(/['Y']/, @@stackSize.to_s)
   @@localCounter += 3
   @@code[3].gsub!(/['Z']/, @@localCounter.to_s)
   @@code << @@codeAfter
-  @@code.each{ |line|
-    jasminFile << line
-    jasminFile << "\n"
+
+  File.open(@@fileName, "w") { |jasminFile|
+    @@code.each{ |line|
+      jasminFile << line
+      jasminFile << "\n"
+    }
+    @@prologue.each{ |pline|
+      jasminFile << pline
+      jasminFile << "\n"
+    }
   }
-  @@prologue.each{ |pline|
-    jasminFile << pline
-    jasminFile << "\n"
-  }
-  #jasminFile.gsub!("INTEGERSTORECONSTANT", @@localCounter.to_s)
-  #jasminFile.gsub!("FLOATSTORECONSTANT", (@@localCounter-1).to_s)
-  #jasminFile << jasmineFile
   
 end

@@ -2,22 +2,31 @@
 require './datastructures'
 def getToken(file)
   nextChar = file.getc
+
   if(nextChar == nil)
     thisToken = Token.new("eof", "eof")
     return thisToken
   end
+
   nextChar = nextChar.chr  #converts char code into an actual char
+
   while(nextChar == ' ' || nextChar == "\n" || nextChar == "\t") 
+
     if( nextChar == "\n")
       @@lineNumber += 1
     end
+
     nextChar = file.getc
+
     if(nextChar == nil)
       thisToken = Token.new("eof", "eof")
       return thisToken
     end
+
     nextChar = nextChar.chr
+
   end
+
   ## LISP STYLE COMMENTS
   if(nextChar == ";")
     while(nextChar != "\n") #  || nextChar[0] == 10)
@@ -31,10 +40,12 @@ def getToken(file)
     @@lineNumber += 1
     return getToken(file)
   end
+
   case nextChar
     when '"'
       thisToken = scanString(file)
       return thisToken
+
     when '+','-'
       peekChar = file.getc
       if(peekChar == nil)
@@ -50,12 +61,15 @@ def getToken(file)
         file.ungetc(peekChar[0])
         return scanOperator(file,nextChar)
       end
+
     when '[',']'
       tokenType = nextChar == "[" ? "LeftBracket" : "RightBracket"
       thisToken = Token.new(tokenType,nextChar)
       return thisToken
+
     when '&','|','!','=','<','>','*','/','%','^',':','\\','+','-'
       return scanOperator(file,nextChar)
+
     else
       if nextChar == "0" || (nextChar.to_i > 0 && nextChar.to_i <= 9)
         prev = nextChar
@@ -68,6 +82,7 @@ def getToken(file)
         @@errorList << "Line " + @@lineNumber.to_s + ": " + "Unrecognized Token : " + nextChar
         return getToken(file)
       end
+
   end
   
   return token
@@ -82,20 +97,26 @@ def charIsLowerCaseLetter(letter)
 end
 
 def scanOperator(file,prev)
+
   currentOperator = prev
+
   case currentOperator
     when '&','|','=','/','%','^','\\','+','-'
       pointer = file.getc
+
       if(pointer == nil)
         @@errorList << "Line " + @@lineNumber.to_s + ": " + "EOF Found in Operator " + currentOperator + " , Looking for [ ]"
         thisToken = Token.new("eof", "eof")
         return thisToken
       end
+
       pointer = pointer.chr
+
       if pointer == ' ' || pointer == '[' || pointer == ']' || pointer == "\n"
         if pointer == '[' || pointer == ']'
           file.ungetc(pointer[0])
         end
+
         if(pointer == "\n")
           @@lineNumber += 1
         end
@@ -106,15 +127,20 @@ def scanOperator(file,prev)
         @@errorList << "Line " + @@lineNumber.to_s + ": " + "Unrecognized Token : " + currentOperator
         return Token.new("Operator", currentOperator)
       end
+
     when '<','>','!',':'
       pointer = file.getc
+
       if(pointer == nil)
         @@errorList << "Line " + @@lineNumber.to_s + ": " + "EOF Found in Operator " + currentOperator + " , Looking for [ ]"
         thisToken = Token.new("eof", "eof")
         return thisToken
       end
+
       pointer = pointer.chr
+
       if pointer == ' ' || pointer == '[' || pointer == ']' || pointer == "\n"
+
         if pointer == '[' || pointer == ']'
           file.ungetc(pointer[0])
         end
@@ -123,33 +149,46 @@ def scanOperator(file,prev)
         end
         thisToken = Token.new("Operator",currentOperator)
         return thisToken
+
       elsif(pointer == "=")
+
         currentOperator += pointer
         pointer = file.getc
+
         if(pointer == nil)
           @@errorList << "Line " + @@lineNumber.to_s + ": " + "EOF Found in Operator " + currentOperator + " , Looking for [ ]"
           thisToken = Token.new("eof", "eof")
           return thisToken
         end
+
         pointer = pointer.chr
+
         if pointer == ' ' || pointer == '[' || pointer == ']' || pointer == "\n"
+
           if pointer == '[' || pointer == ']'
             file.ungetc(pointer[0])
           end
+
           if(pointer == "\n")
             @@lineNumber += 1
           end
+
           thisToken = Token.new("Operator",currentOperator)
+
           return thisToken
+
         elsif(pointer == '>' && currentOperator == "<=")
           currentOperator += pointer
           pointer = file.getc
+
           if(pointer == nil)
             @@errorList << "Line " + @@lineNumber.to_s + ": " + "EOF Found in Operator " + currentOperator + " , Looking for [ ]"
             thisToken = Token.new("eof", "eof")
             return thisToken
           end
+
           pointer = pointer.chr
+
           if pointer == ' ' || pointer == '[' || pointer == ']' || pointer == "\n"
             if pointer == '[' || pointer == ']'
               file.ungetc(pointer[0])
@@ -159,11 +198,13 @@ def scanOperator(file,prev)
             end
             thisToken = Token.new("Operator",currentOperator)
             return thisToken
+            
           else
             currentOperator += pointer
             @@errorList << "Line " + @@lineNumber.to_s + ": " + "Unrecognized Token : " + currentOperator
             return Token.new("Operator", currentOperator)
           end
+
         else
           currentOperator += pointer
           @@errorList << "Line " + @@lineNumber.to_s + ": " + "Unrecognized Token : " + currentOperator
@@ -204,7 +245,7 @@ def scanOperator(file,prev)
           if pointer == '[' || pointer == ']'
             file.ungetc(pointer[0])
           end
-          if(pointer == "\n")
+          if pointer == "\n"
             @@lineNumber += 1
           end
           thisToken = Token.new("Operator",currentOperator)
@@ -223,7 +264,7 @@ end
 def scanName(file,prev)
   currentName = prev
   pointer = file.getc
-  if(pointer == nil)
+  if pointer == nil
     @@errorList << "Line " + @@lineNumber.to_s + ": " + "EOF Found in Variable/Name " + currentName + " , Looking for [ ]"
     thisToken = Token.new("eof", "eof")
     return thisToken
@@ -232,9 +273,10 @@ def scanName(file,prev)
   while(charIsLowerCaseLetter(pointer[0]) || ## Lower Case
         charIsUpperCaseLetter(pointer[0]) || ## Upper Case
         (pointer == "_") || (pointer == "0") || (pointer.to_i > 0 && pointer.to_i <= 9))
+
     currentName += pointer
     pointer = file.getc
-    if(pointer == nil)
+    if pointer == nil
       @@errorList << "Line " + @@lineNumber.to_s + ": " + "EOF Found in Variable/Name " + currentName + " , Looking for [ ]"
       thisToken = Token.new("eof", "eof")
       return thisToken
@@ -248,7 +290,7 @@ def scanName(file,prev)
   else
     returnToken = Token.new(@@symbolTable[currentName]["type"], currentName)
   end
-  if pointer == ' ' || pointer == '[' || pointer == ']'  || pointer == "\n"
+  if pointer == ' ' || pointer == '[' || pointer == ']' || pointer == "\n"
     if pointer == '[' || pointer == ']'
       file.ungetc(pointer[0])
     end
@@ -262,12 +304,15 @@ end
 def scanNumber(file, prev)
   currentNumber = prev
   pointer = file.getc
-  if(pointer == nil)
+
+  if pointer == nil
     @@errorList << "Line " + @@lineNumber.to_s + ": " + "EOF Found in Integer " + currentNumber + " , Looking for [ ]"
     thisToken = Token.new("eof", "eof")
     return thisToken
   end
+
   pointer = pointer.chr
+
   ##### INTEGER STATE #####
   while pointer == "0"  || (pointer.to_i > 0 && pointer.to_i <= 9)
     currentNumber += pointer
@@ -286,16 +331,19 @@ def scanNumber(file, prev)
     if(pointer == "\n")
       @@lineNumber += 1
     end
-    thisToken = Token.new("Integer",currentNumber)
+    thisToken = Token.new("Integer", currentNumber)
     if(thisToken.value > 2147483647)  #Max Integer Size, we'll convert to Float
-      thisToken = Token.new("Float",currentNumber + ".0")
+      thisToken = Token.new("Float", currentNumber + ".0")
     end
     return thisToken
   elsif pointer != '.' #&& pointer != 'e' && pointer != 'E'
+
     currentNumber += pointer
     @@errorList << "Line " + @@lineNumber.to_s + ": " + "Unrecognized Token : " + currentNumber
     return Token.new("Integer", currentNumber)
+
   ##### INTEGER STATE #####
+
   elsif pointer == '.'
   ##### FLOAT STATE #####
     currentNumber += pointer
@@ -372,22 +420,30 @@ end
 def scanString(file)
   currentString = "\""
   pointer = file.getc
-  if(pointer == nil)
+
+  if pointer == nil
     @@errorList << "Line " + @@lineNumber.to_s + ": " + "EOF Found in String " + currentString + " , Looking for \" "
     thisToken = Token.new("eof", "eof")
     return thisToken
   end
+
   pointer = pointer.chr
+
   while pointer != '"'
+
     if pointer == '\\' 
+
       pointer = file.getc
+
       if(pointer == nil)
         @@errorList << "Line " + @@lineNumber.to_s + ": " + "EOF Found in String " + currentString + " , Looking for \" "
         thisToken = Token.new("eof", "eof")
         return thisToken
       end
+
       pointer = pointer.chr
       backtypes = {"a"=>7,"b"=>8,"f"=>12,"n"=>10,"r"=>13,"t"=>9,"v"=>11,"\\"=>92,"0"=>0}
+
       if backtypes[pointer] != nil
         if backtypes[pointer] == 10
           @@lineNumber += 1
@@ -396,25 +452,32 @@ def scanString(file)
       else
         currentString += "\\" + pointer
       end
+
     else
       currentString += pointer
     end
+
     pointer = file.getc
-    if(pointer == nil)
+
+    if pointer == nil
       @@errorList << "Line " + @@lineNumber.to_s + ": " + "EOF Found in String " + currentString + " , Looking for \" "
       thisToken = Token.new("eof", "eof")
       return thisToken
     end
     pointer = pointer.chr
   end
+
   currentString += "\""
   pointer = file.getc
-  if(pointer == nil)
+
+  if pointer == nil
     @@errorList << "Line " + @@lineNumber.to_s + ": " + "EOF Found in String " + currentString + " , Looking for [ ]"
     thisToken = Token.new("eof", "eof")
     return thisToken
   end
+
   pointer = pointer.chr
+
   if pointer != " " && pointer != "[" && pointer != "]" && pointer != "\n"
     currentString += pointer
     @@errorList << "Line " + @@lineNumber.to_s + ": " + "Syntax : Invalid String : " + currentString
