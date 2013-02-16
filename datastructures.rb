@@ -10,7 +10,7 @@
 ".method public static main([Ljava/lang/String;)V
 \t.limit stack Y
 \t.limit locals Z"]
-@@codeAfter = ["\treturn\n.end method"]
+@@codeAfter = "\treturn\n.end method"
 @@prologue = ["\n"]
 @@stackSize = 0
 @@localSize = 10

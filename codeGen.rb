@@ -1,34 +1,37 @@
 def generateCode(tree)
+
   if(tree.value == nil && tree.children[0] == nil)
     return
   end
+  
   if(tree.children[0].value == "let")
     if(tree.children[0].typeName == "Function")
       generateFunctionCode(tree)
     else
       generateLetCode(tree)
     end
-  else
-    i = 1
-    while(i < tree.children.size())
-      if(tree.children[i].value == nil)
-        generateCode(tree.children[i]) 
-        if(tree.children[i].Code != nil)
-          code = "\t" + tree.children[i].Code
-          @@code << code
-        end
-      else
+    return
+  end
+
+  i = 1
+  while(i < tree.children.size())
+    if(tree.children[i].value == nil)
+      generateCode(tree.children[i]) 
+      if(tree.children[i].Code != nil)
         code = "\t" + tree.children[i].Code
         @@code << code
       end
-      i += 1
+    else
+      code = "\t" + tree.children[i].Code
+      @@code << code
     end
-    if(tree.children[0].value == "while")
-      generateWhileCode(tree.children[1]) 
-    end
-    code = "\t" + tree.children[0].Code
-    @@code << code
+    i += 1
   end
+  if(tree.children[0].value == "while")
+    generateWhileCode(tree.children[1]) 
+  end
+  code = "\t" + tree.children[0].Code
+  @@code << code
 end
 
 def generateLetCode(tree)
@@ -51,7 +54,9 @@ def generateLetCode(tree)
 end
 
 def generateFunctionCode(tree) #goes node 1 code, node 2 code, then node 0 code, then add it to @@codeAfter
-  thisMethodCode = ["\n"+tree.children[1].Code]
+
+  thisMethodCode = "\n"+tree.children[1].Code
+
   if(tree.children[2].value == nil)
     oldCode = Array.new(@@code)
     @@code = [""]
@@ -62,10 +67,12 @@ def generateFunctionCode(tree) #goes node 1 code, node 2 code, then node 0 code,
     }
     @@code = Array.new(oldCode)
   end
-  if(tree.children[2].Code != nil)
+
+  unless tree.children[2].Code.nil?
     code = "\n\t" + tree.children[2].Code
     thisMethodCode << code
   end
+
   thisMethodCode << tree.children[0].Code
   if(tree.children.size == 4)
     generateCode(tree.children[3])
