@@ -15,19 +15,19 @@ end
 
 task :run, :verbosity do |t, args|
     if args.verbosity == nil || args.verbosity != "low" 
-        sh "cat stutest.in"
+        sh "cat stutestNoErrors.in"
     end
 
     if ENV["file"] != nil
         fileToBuild = ENV["file"]
     else
-        fileToBuild = "stutest.in"
+        fileToBuild = "stutestNoErrors.in"
     end
 
     ruby "driver.rb #{fileToBuild}"
 
-    sh "java -jar jasmin.jar stutest.j"
-    sh "java stutest > stutest.out"
+    sh "java -jar jasmin.jar stutestNoErrors.j"
+    sh "java stutestNoErrors > stutest.out"
     sh "cat stutest.out"
 end
 
@@ -36,13 +36,13 @@ task :buildAndRun => :verifyJasmin do
     if ENV["file"] != nil
         fileToBuild = ENV["file"]
     else
-        fileToBuild = "stutest.in"
+        fileToBuild = "stutestNoErrors.in"
     end
     
     ruby "driver.rb #{fileToBuild}"
 
-    sh "java -jar jasmin.jar stutest.j"
-    sh "java stutest > stutest.out"
+    sh "java -jar jasmin.jar stutestNoErrors.j"
+    sh "java stutestNoErrors > stutest.out"
     puts "Results in stutest.out"
 
 end
