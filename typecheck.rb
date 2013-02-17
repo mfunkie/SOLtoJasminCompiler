@@ -1,14 +1,13 @@
 def typeCheck(tree)
-  if(tree.value == nil && tree.children[0] == nil)
+  if tree.value.nil? && tree.children[0].nil?
     return "NULL"
   end
 
   if(tree.value == nil && tree.children[0].typeName == nil) 
-     if(tree.children.length > 1)
+     if tree.children.length > 1
        @@errorList << "Found statement, expected Operator"
        return nil
      end
-
      # We have to go deeper
      return typeCheck(tree.children[0])
   end
@@ -23,7 +22,7 @@ def typeCheck(tree)
     end
   end
 
-  if(@@symbolTable[tree.children[0].typeName] == nil && tree.children[0].typeName != "Variable")
+  if(@@symbolTable[tree.children[0].typeName].nil? && tree.children[0].typeName != "Variable")
     @@errorList << "Found " + tree.children[0].typeName + " Expected Operator"
     return nil
   end
@@ -32,27 +31,23 @@ def typeCheck(tree)
   i = 1
 
   while(i < tree.children.size())
-    if(tree.children[i].value == nil)
+    if tree.children[i].value.nil?
       type = typeCheck(tree.children[i])
       tree.children[i].setReturnType(type)
     else
       type = tree.children[i].typeName
 
       if(@@symbolTable["Code"][tree.children[i].typeName] != nil)
-        #
 
         value = @@symbolTable["Code"][tree.children[i].typeName]["Value"]
         code =  String.new(@@symbolTable["Code"][tree.children[i].typeName]["Code"])
 
-        if(value != nil)
-
-          ## SPECIAL BOOLEAN CASE
-          if(tree.children[i].typeName == "Boolean")
-            thisValue = tree.children[i].value == "true" ? 1 : 0
-            code.gsub!(/['X']/, thisValue.to_s)
-          else
-            code.gsub!(/['X']/, tree.children[i].value.to_s)
-          end
+        if(tree.children[i].typeName == "Boolean")
+          # Translate true value to numeric for special boolean case
+          thisValue = tree.children[i].value == "true" ? 1 : 0
+          code.gsub!(/['X']/, thisValue.to_s)
+        else
+          code.gsub!(/['X']/, tree.children[i].value.to_s)
         end
 
         tree.children[i].setCode(code)
@@ -75,7 +70,7 @@ def typeCheck(tree)
           if(tree.children[0].value == ":=")
             # Bide our time, no code needs to be made
             type = "Function"
-          else  
+          else
             @@errorList << "Error: Incorrect Use of Function"
             return nil
           end
@@ -91,7 +86,7 @@ def typeCheck(tree)
       end
     end
 
-    if(type == nil)
+    if type.nil?
       @@errorList << "Error in Subtree: Returning Error"
       return nil
     end
@@ -126,20 +121,24 @@ def typeCheck(tree)
 
   if(tree.children[0].typeName == "Variable")
     thisFunction = varCheck(tree.children[0])
-    if(thisFunction == nil)
+    
+    if thisFunction.nil?
       @@errorList << "Error: Function " + tree.children[0].value + " does not exist in this context."
       return nil
     end
+    
     returnType = thisFunction["type"] #code is under call
-    if(thisFunction["call"] == nil)
+    
+    if thisFunction["call"].nil?
       @@errorList << "Found Variable, Expected Function"
       return nil
     end
+    
     tree.children[0].setCode(thisFunction["call"])
     if(lookupName != thisFunction["arguments"])
       @@errorList << "Incorrect arguments for function"
-      @@errorList << "Found: "+lookupName
-      @@errorList << "Expected: "+thisFunction["arguments"]
+      @@errorList << "Found: #{lookupName}"
+      @@errorList << "Expected: #{thisFunction["arguments"]}"
       return nil
     end
   else
@@ -151,12 +150,12 @@ def typeCheck(tree)
      lookupName == "+Float"   || lookupName == "-Float")
      oldCode = tree.children[1].Code
      loadType = tree.children[1].typeName == "Integer" ? "ldc 0" : "ldc 0.0"
-     newCode = loadType + "\n\t" + oldCode
+     newCode = "#{loadType}\n\t#{oldCode}"
      tree.children[1].setCode(newCode)
    end
   
   #Set conversion codes
-  if(returnType == nil)
+  if returnType.nil?
     @@errorList << "Return Type is Nil, Returning Error"
     @@errorList << "No Rule for " + lookupName
     return returnType
@@ -178,9 +177,9 @@ def typeCheck(tree)
     @@labelCounter += 1
     thisBoolCode.gsub!(/['Z']/, @@labelCounter.to_s)
     @@labelCounter += 1
-    if(tree.children[0].typeName == "Variable")
-      thisBoolCode = tree.children[0].Code + "\n\t" + thisBoolCode
-    end
+
+    thisBoolCode = "#{tree.children[0].Code}\n\t#{thisBoolCode}" if tree.children[0].typeName == "Variable"
+    
     tree.children[0].setCode(thisBoolCode)
   else
     if(storageType != nil)  # := case
@@ -189,7 +188,7 @@ def typeCheck(tree)
       tree.setCode(loadingType)
     else
       if(tree.children[0].typeName != "Variable")
-        if(@@symbolTable["Code"][codeType] != nil)
+        unless @@symbolTable["Code"][codeType].nil?
           tree.children[0].setCode(@@symbolTable["Code"][codeType])
         else
           @@errorList << "Error: No Code found for " + codeType
@@ -202,63 +201,47 @@ def typeCheck(tree)
   
   ## Special rules for ^ because it only takes doubles but we want to return float
   if(returnType != "Boolean" and tree.children[0].typeName != "Variable")
-    while(i < tree.children.size())
-      if( tree.children[0].value == "^")
+    convertDouble = tree.children[0].value == "^"
+    
+    tree.children.each_index do |i|
+      next if i == 0 # i starts at 1
+      
+      if convertDouble
         conversion = tree.children[i].typeName + "Double"
-        codeAdd = @@symbolTable["Conversion"][conversion]
-        if(tree.children[i].Code != nil)
-          newCode = tree.children[i].Code + "\n" + "\t" + codeAdd
-        else
-          newCode = codeAdd
-        end
-        tree.children[i].setCode(newCode)
-      elsif( tree.children[i].typeName != tree.typeName && tree.typeName != "String")
+      elsif ( tree.children[i].typeName != tree.typeName && tree.typeName != "String")
         conversion = tree.children[i].typeName + tree.typeName
-        codeAdd = @@symbolTable["Conversion"][conversion]
-        if(tree.children[i].Code != nil)
-          newCode = tree.children[i].Code + "\n" + "\t" + codeAdd
-        else
-          newCode = codeAdd
-        end
-        tree.children[i].setCode(newCode)
+      else
+        next
       end
-      i += 1
+        
+      codeAdd = @@symbolTable["Conversion"][conversion]
+      newCode = tree.children[i].Code.nil? ? codeAdd : "#{tree.children[i].Code}\n\t#{codeAdd}"
+
+      tree.children[i].setCode(newCode)
+      
     end
+
   elsif(tree.children.size == 3 and tree.children[0].typeName != "Variable")
-    child1 = tree.children[1]
-    child2 = tree.children[2]
-    childLookup = child1.typeName + child2.typeName
+
+    childLookup = tree.children[1].typeName + tree.children[2].typeName
+
     if(@@symbolTable["BoolConversion"][childLookup] != nil)
       if(lookupName == "&IntegerInteger" || lookupName == "|IntegerInteger" || childLookup != "IntegerInteger")
-        child1Change = @@symbolTable["BoolConversion"][childLookup]["child1"]
-        if(child1Change != nil)
-          if(child1.Code != nil)
-            newCode = String.new(child1.Code + "\n" + "\t" + child1Change)
-          else
-            newCode = String.new(child1Change)
+        
+        tree.children.each_index do |i|
+          next if i == 0 # i starts at 1
+
+          childChange = @@symbolTable["BoolConversion"][childLookup]["child#{i}"]
+          unless childChange.nil?
+            newCode = tree.children[i].Code.nil? ? "#{childChange}" : "#{tree.children[i].Code}\n\t#{childChange}"
+            newCode.gsub!(/['X']/, @@labelCounter.to_s)
+            @@labelCounter += 1
+            newCode.gsub!(/['Y']/, @@labelCounter.to_s)
+            @@labelCounter += 1
+            newCode.gsub!(/['Z']/, @@labelCounter.to_s)
+            @@labelCounter += 1
+            tree.children[i].setCode(newCode)
           end
-          newCode.gsub!(/['X']/, @@labelCounter.to_s)
-          @@labelCounter += 1
-          newCode.gsub!(/['Y']/, @@labelCounter.to_s)
-          @@labelCounter += 1
-          newCode.gsub!(/['Z']/, @@labelCounter.to_s)
-          @@labelCounter += 1
-          child1.setCode(newCode)
-        end
-        child2Change = @@symbolTable["BoolConversion"][childLookup]["child2"]
-        if(child2Change != nil)
-          if(child2.Code != nil)
-            newCode = String.new(child2.Code + "\n" + "\t" + child2Change)
-          else
-            newCode = String.new(child2Change)
-          end
-          newCode.gsub!(/['X']/, @@labelCounter.to_s)
-          @@labelCounter += 1
-          newCode.gsub!(/['Y']/, @@labelCounter.to_s)
-          @@labelCounter += 1
-          newCode.gsub!(/['Z']/, @@labelCounter.to_s)
-          @@labelCounter += 1
-          child2.setCode(newCode)
         end
       end
     end
@@ -297,21 +280,23 @@ def specialTypeCheck(tree)
   end
   
   if(tree.children[0].typeName == "Variable")
+
     codeAndType = varCheck(tree.children[0])
     if(codeAndType == nil)
       @@errorList << "Error: Variable or Function " + tree.children[0].value + " does not exist in this context."
       return nil
     end
+
     type = codeAndType["type"]
     if(type != "Boolean" and codeAndType["call"] == nil)
       @@errorList << "Error: Variable cannot exist in location unless Boolean or function"
       return nil
     end
 
-    if(codeAndType["call"] != nil)
+    tree.children[0].setTypeName(type)
+    unless codeAndType["call"].nil?
 
       code = String.new(codeAndType["call"])
-      tree.children[0].setTypeName(type)
       tree.children[0].setCode(code)
       tree.setCode("")
       tree.setTypeName(type)
@@ -319,7 +304,6 @@ def specialTypeCheck(tree)
 
     else
       code = String.new(codeAndType["loadCode"])
-      tree.children[0].setTypeName(type)
       tree.children[0].setCode(code)
       tree.setCode("")
       tree.setTypeName("Boolean")
@@ -334,7 +318,7 @@ def typeCheckKeyword(tree)
   case tree.children[0].value
     when "while"
 
-      if(tree.children.size != 3)
+      if tree.children.size != 3
         @@errorList << "Error: In While Statement, incorrect number of arguments"
         @@errorList << "Correct Usage: while [bool or integer] [loop]"
         return nil
@@ -345,68 +329,68 @@ def typeCheckKeyword(tree)
       whileLabelY = @@labelCounter
       @@labelCounter += 1
       
-      if(tree.children[1].value == nil)
-        type = typeCheck(tree.children[1]) 
-        if(type != "Boolean" && type != "Integer")
-          @@errorList << "Error: In While Statement, didnt find boolean or integer where expected"
-          return nil
-        end
-        
-        codeAdd = @@symbolTable["whileCode"]["Bool"]
-        
-        thisCodeAdd = String.new(codeAdd)
-        thisCodeAdd.gsub!(/['X']/, whileLabelX.to_s)
-        thisCodeAdd.gsub!(/['Y']/, whileLabelY.to_s)
-        if(tree.children[1].Code != nil)
-          newCode = tree.children[1].Code + "\n" + "\t" + thisCodeAdd
-        else
-          newCode = thisCodeAdd
-        end
-        tree.children[1].setCode(newCode)
-      else
+
+      unless tree.children[1].value.nil?
         @@errorList << "Error: No Brackets around Boolean"
         @@errorList << "Correct Usage: while [bool or integer] [loop]"
         return nil
       end
+
+      type = typeCheck(tree.children[1])
+      if(type != "Boolean" && type != "Integer")
+        @@errorList << "Error: In While Statement, didnt find boolean or integer where expected"
+        return nil
+      end
       
-      if(tree.children[2].value == nil)
-        ## We dont need type of while but we do need to type check it
-        @@currentLevel += 1
-        if(@@variableTable[@@currentLevel] == nil)
-          @@variableTable[@@currentLevel] = {}
-        end
-        type = typeCheck(tree.children[2])
-        if(type != nil)
-          if(tree.children[2].Code != nil)
-            code = String.new(tree.children[2].Code + "\n\tpop")
-          else
-            code = String.new("pop")
-          end
-          tree.children[2].setCode(code)
-        end
-        @@variableTable.delete_at(@@currentLevel)
-        @@currentLevel -= 1
-        #We're going to need to put this code on the while due to the fact that
-        #We will need to insert boolean code back in before the conditional in Code Generation
-        codeAdd = @@symbolTable["whileCode"]["After"]
-        thisCodeAdd = String.new(codeAdd)
-        thisCodeAdd.gsub!(/['Y']/, whileLabelY.to_s)
-        tree.children[0].setCode(thisCodeAdd)
-      else
+      codeAdd = @@symbolTable["whileCode"]["Bool"]
+      
+      thisCodeAdd = String.new(codeAdd)
+      thisCodeAdd.gsub!(/['X']/, whileLabelX.to_s)
+      thisCodeAdd.gsub!(/['Y']/, whileLabelY.to_s)
+
+      newCode = tree.children[1].Code.nil? ? thisCodeAdd : "#{tree.children[1].Code}\n\t#{thisCodeAdd}"
+
+      tree.children[1].setCode(newCode)
+
+      unless tree.children[2].value.nil?
         @@errorList << "Error: No Brackets around loop"
         @@errorList << "Correct Usage: while [bool or integer] [loop]"
         return nil
       end
+      
+      ## We dont need type of while but we do need to type check it
+      @@currentLevel += 1
+
+      @@variableTable[@@currentLevel] = {} if @@variableTable[@@currentLevel].nil?
+
+      type = typeCheck(tree.children[2])
+      
+      unless type.nil?
+        code = tree.children[2].Code.nil? ? "pop" : "#{tree.children[2].Code}\n\tpop"
+        tree.children[2].setCode(code)
+      end
+      
+      @@variableTable.delete_at(@@currentLevel)
+      @@currentLevel -= 1
+      #We're going to need to put this code on the while due to the fact that
+      #We will need to insert boolean code back in before the conditional in Code Generation
+      codeAdd = @@symbolTable["whileCode"]["After"]
+      thisCodeAdd = String.new(codeAdd)
+      thisCodeAdd.gsub!(/['Y']/, whileLabelY.to_s)
+      tree.children[0].setCode(thisCodeAdd)
+
       tree.setCode("")
       treeType = nil;
       tree.setTypeName(treeType)
       return treeType
     when "if"
+
       if(tree.children.size != 3 && tree.children.size != 4)
         @@errorList << "Error: Incorrect number of arguments"
         @@errorList << "Correct Usage: if [bool or integer] [ifclause] [elseclause] or if [bool] [ifclause]"
         return nil
       end
+
       labelX = @@labelCounter
       @@labelCounter += 1
       labelY = @@labelCounter
@@ -414,82 +398,76 @@ def typeCheckKeyword(tree)
       labelZ = @@labelCounter
       @@labelCounter += 1
       
-      if(tree.children[1].value == nil)
-        type = typeCheck(tree.children[1]) 
-        if(type != "Boolean" && type != "Integer")
-          @@errorList << "Error: In If Statement, Didnt find boolean or integer where expected"
-          return nil
-        end
-        
-        codeAdd = tree.children.size == 3 ? @@symbolTable["ifCode"]["Bool"] : @@symbolTable["ifCode"]["Bool2"]
-        thisCodeAdd = String.new(codeAdd)
-        thisCodeAdd.gsub!(/['X']/, labelX.to_s)
-        thisCodeAdd.gsub!(/['Y']/, labelY.to_s)
-        if(tree.children[1].Code != nil)
-          newCode = tree.children[1].Code + "\n" + "\t" + thisCodeAdd
-        else
-          newCode = thisCodeAdd
-        end
-        tree.children[1].setCode(newCode)
-      else
-        @@errorList << "Error: No Brackets around Boolean"
-        @@errorList << "Correct Usage: if [bool or integer] [ifclause] [elseclause] or if [bool] [ifclause]"
-        return nil
-      end
-      if(tree.children[2].value == nil)
-        @@currentLevel += 1
-        if(@@variableTable[@@currentLevel] == nil)
-          @@variableTable[@@currentLevel] = {}
-        end
-        type = typeCheck(tree.children[2])
-        @@variableTable.delete_at(@@currentLevel)
-        @@currentLevel -= 1
-        
-        codeAdd = tree.children.size == 3 ? @@symbolTable["ifCode"]["AfterFirst1"] : @@symbolTable["ifCode"]["AfterFirst2"]
-        thisCodeAdd = String.new(codeAdd)
-        thisCodeAdd.gsub!(/['X']/, labelX.to_s)
-        thisCodeAdd.gsub!(/['Z']/, labelZ.to_s)
-        if(tree.children[2].Code != nil)
-          newCode = tree.children[2].Code + "\n" + thisCodeAdd
-        else
-          newCode = thisCodeAdd
-        end
-        if(type != nil && type != "String" && tree.children.size == 3)
-          newCode = "pop\n" + newCode
-        end
-        tree.children[2].setCode(newCode)
-        typeOne = type
-      else
+      unless tree.children[1].value.nil?
         @@errorList << "Error: No Brackets around If Clause"
         @@errorList << "Correct Usage: if [bool or integer] [ifclause] [elseclause] or if [bool] [ifclause]"
         return nil
       end
+
+      type = typeCheck(tree.children[1]) 
+      if(type != "Boolean" && type != "Integer")
+        @@errorList << "Error: In If Statement, Didnt find boolean or integer where expected"
+        return nil
+      end
+      
+      codeAdd = tree.children.size == 3 ? @@symbolTable["ifCode"]["Bool"] : @@symbolTable["ifCode"]["Bool2"]
+      thisCodeAdd = String.new(codeAdd)
+      thisCodeAdd.gsub!(/['X']/, labelX.to_s)
+      thisCodeAdd.gsub!(/['Y']/, labelY.to_s)
+
+      newCode = tree.children[1].Code.nil? ? thisCodeAdd : "#{tree.children[1].Code}\n\t#{thisCodeAdd}"
+
+      tree.children[1].setCode(newCode)
+
+      unless tree.children[2].value.nil?
+        @@errorList << "Error: No Brackets around If Clause"
+        @@errorList << "Correct Usage: if [bool or integer] [ifclause] [elseclause] or if [bool] [ifclause]"
+        return nil
+      end
+
+      @@currentLevel += 1
+
+      @@variableTable[@@currentLevel] = {} if @@variableTable[@@currentLevel].nil?
+
+      type = typeCheck(tree.children[2])
+      @@variableTable.delete_at(@@currentLevel)
+      @@currentLevel -= 1
+      
+      codeAdd = tree.children.size == 3 ? @@symbolTable["ifCode"]["AfterFirst1"] : @@symbolTable["ifCode"]["AfterFirst2"]
+      thisCodeAdd = String.new(codeAdd)
+      thisCodeAdd.gsub!(/['X']/, labelX.to_s)
+      thisCodeAdd.gsub!(/['Z']/, labelZ.to_s)
+
+      newCode = tree.children[2].Code.nil? ? thisCodeAdd : "#{tree.children[2].Code}\n#{thisCodeAdd}"
+      newCode = "pop\n#{newCode}" if type != nil && type != "String" && tree.children.size == 3
+      
+      tree.children[2].setCode(newCode)
+      typeOne = type
+
       if(tree.children.size == 4)
-        if(tree.children[3].value == nil)
-          @@currentLevel += 1
-          if(@@variableTable[@@currentLevel] == nil)
-            @@variableTable[@@currentLevel] = {}
-          end
-          type = typeCheck(tree.children[3])
-          @@variableTable.delete_at(@@currentLevel)
-          @@currentLevel -= 1
-          codeAdd = @@symbolTable["ifCode"]["AfterSecond"]
-          thisCodeAdd = String.new(codeAdd)
-          thisCodeAdd.gsub!(/['Z']/, labelZ.to_s)
-          if(tree.children[3].Code != nil)
-            newCode = tree.children[3].Code + "\n" + thisCodeAdd
-          else
-            newCode = thisCodeAdd
-          end
-          tree.children[3].setCode(newCode)
-          typeTwo = tree.children[3].typeName
-          if(typeOne != typeTwo)
-            @@errorList << "Error: If Return Does not Match Else Return"
-            return nil
-          end
-        else
+        unless tree.children[3].value.nil?
           @@errorList << "Error: No Brackets around Else Clause"
           @@errorList << "Correct Usage: if [bool or integer] [ifclause] [elseclause] or if [bool] [ifclause]"
+          return nil
+        end
+
+        @@currentLevel += 1
+
+        @@variableTable[@@currentLevel] = {} if @@variableTable[@@currentLevel].nil?
+
+        type = typeCheck(tree.children[3])
+        @@variableTable.delete_at(@@currentLevel)
+        @@currentLevel -= 1
+        codeAdd = @@symbolTable["ifCode"]["AfterSecond"]
+        thisCodeAdd = String.new(codeAdd)
+        thisCodeAdd.gsub!(/['Z']/, labelZ.to_s)
+
+        newCode = tree.children[3].Code.nil? ? thisCodeAdd : "#{tree.children[3].Code}\n#{thisCodeAdd}"
+
+        tree.children[3].setCode(newCode)
+        typeTwo = tree.children[3].typeName
+        if(typeOne != typeTwo)
+          @@errorList << "Error: If Return Does not Match Else Return"
           return nil
         end
       end
@@ -502,11 +480,12 @@ def typeCheckKeyword(tree)
     when "begin"
       i = 1
       @@currentLevel += 1
-      if(@@variableTable[@@currentLevel] == nil)
-        @@variableTable[@@currentLevel] = {}
-      end
+
+      @@variableTable[@@currentLevel] = {} if @@variableTable[@@currentLevel].nil?
+
       while(i < tree.children.size-1)
-        if(tree.children[i].value != nil)
+
+        unless tree.children[i].value.nil?
           @@errorList << "Error in Begin End Statement, No Brackets around Statement " + printStatement(tree.children[i])
           @@variableTable.delete_at(@@currentLevel)
           @@currentLevel -= 1
@@ -514,12 +493,9 @@ def typeCheckKeyword(tree)
         end
         lastTyped = typeCheck(tree.children[i])
         
-        if(lastTyped != nil && i != tree.children.size-2) 
-          if(tree.children[i].Code != nil)
-            tree.children[i].setCode(String.new(tree.children[i].Code + "\n\tpop"))
-          else
-            tree.children[i].setCode(String.new("pop"))
-          end
+        if(lastTyped != nil && i != tree.children.size-2)
+          childICode = tree.children[i].Code.nil? ? "pop" : "#{tree.children[i].Code}\n\tpop"
+          tree.children[i].setCode(childICode)
         end
         i += 1
       end
@@ -537,22 +513,19 @@ def typeCheckKeyword(tree)
       return lastTyped
     when "let"
       isFunction = false
-      if(tree.children.size != 3 && tree.children.size != 4)
+      if (tree.children.size != 3 && tree.children.size != 4) || (tree.children[1].value != nil)
         @@errorList << "Error: Incorrect number of arguments"
         @@errorList << "Correct Usage: let [: variable_name type] value or let [: variable_name type] value [action]"
         return nil
       end
-      if(tree.children[1].value != nil)
-        @@errorList << "Error: Incorrect number of arguments"
-        @@errorList << "Correct Usage: let [: variable_name type] value or let [: variable_name type] value [action]"
-        return nil
-      end
+
       child1 = tree.children[1]
       if(child1.children == nil or child1.children.size != 3)
         @@errorList << "Error: Incorrect number of arguments for [: variable_name type]"
         return nil
       end
-      if(child1.children[0].value != ":" or child1.children[1].typeName != "Variable" or
+
+      if(child1.children[0].value != ":" || child1.children[1].typeName != "Variable" ||
         child1.children[2].typeName != "Type")
         if(child1.children[1].value == nil)
           isFunction = true
@@ -573,18 +546,20 @@ def typeCheckKeyword(tree)
         if(tree.children[2].value != nil)
           typeAssign = tree.children[2].typeName
           if(@@symbolTable["Code"][typeAssign] != nil)
+
             value = @@symbolTable["Code"][typeAssign]["Value"]
             code =  String.new(@@symbolTable["Code"][typeAssign]["Code"])
-            if(value != nil)
-              ## SPECIAL BOOLEAN CASE
-              if(typeAssign == "Boolean")
-                thisValue = tree.children[2].value == "true" ? 1 : 0
-                code.gsub!(/['X']/, thisValue.to_s)
-              else
-                code.gsub!(/['X']/, tree.children[2].value.to_s)
-              end
+
+            # Translate true value to numeric for special boolean case
+            if(typeAssign == "Boolean")
+              thisValue = tree.children[2].value == "true" ? 1 : 0
+              code.gsub!(/['X']/, thisValue.to_s)
+            else
+              code.gsub!(/['X']/, tree.children[2].value.to_s)
             end
+
             tree.children[2].setCode(code)
+
           else
             if(tree.children[2].typeName == "Variable")
               codeAndType = varCheck(tree.children[2])
@@ -610,16 +585,18 @@ def typeCheckKeyword(tree)
         else
           typeAssign = typeCheck(tree.children[2])
         end
+
         if(typeAssign != @@symbolTable[child1.children[2].value]["typeName"])
           @@errorList << "Error: Value does not match type"
           return nil
         end
+
         if(tree.children.size == 4)  ## So that we can delete this variable when done
           @@currentLevel += 1
         end
-        if(@@variableTable[@@currentLevel] == nil)
-          @@variableTable[@@currentLevel] = {}
-        end
+
+        @@variableTable[@@currentLevel] = {} if @@variableTable[@@currentLevel].nil?
+
         code = String.new(@@symbolTable["loadCode"][typeAssign] + @@localCounter.to_s)
         if(typeAssign == "String")
           code = String.new(code + "\n\tswap")
@@ -633,11 +610,12 @@ def typeCheckKeyword(tree)
         code = String.new(@@symbolTable["storeCode"][typeAssign] + @@localCounter.to_s)
         @@localCounter += 1
         tree.children[1].setCode(code)
+
         if(tree.children.size == 4)
           @@currentLevel += 1
-          if(@@variableTable[@@currentLevel] == nil)
-            @@variableTable[@@currentLevel] = {}
-          end
+
+          @@variableTable[@@currentLevel] = {} if @@variableTable[@@currentLevel].nil?
+
           returnType = typeCheck(tree.children[3])
           @@variableTable.delete_at(@@currentLevel)
           @@currentLevel -= 1
@@ -647,6 +625,7 @@ def typeCheckKeyword(tree)
           end
           @@currentLevel -= 1
         end
+
         return nil
       else
         ##################################
@@ -684,9 +663,7 @@ def typeCheckKeyword(tree)
               return nil
           end
 
-          if(@@variableTable[@@currentLevel+1] == nil)
-            @@variableTable[@@currentLevel+1] = {}
-          end
+          @@variableTable[@@currentLevel+1] = {} if @@variableTable[@@currentLevel+1].nil?
 
           thisType = functionList[i].children[2].value
           thisType = @@symbolTable[thisType]["typeName"]
@@ -791,9 +768,9 @@ def typeCheckKeyword(tree)
           oldLocals = @@localCounter
           @@localCounter = argSize + 1
           @@currentLevel += 1
-          if(@@variableTable[@@currentLevel] == nil)
-            @@variableTable[@@currentLevel] = {}
-          end
+
+          @@variableTable[@@currentLevel] = {} if @@variableTable[@@currentLevel].nil?
+
           typeAssign = typeCheck(tree.children[2])
           @@variableTable.delete_at(@@currentLevel)
           @@currentLevel -= 1
@@ -820,7 +797,7 @@ def typeCheckKeyword(tree)
         localsAndStack.gsub!(/['Y']/, @@stackSize.to_s)
 
         @@stackSize = 0
-        code = String.new(".method public static "+functionSignature+localsAndStack)
+        code = String.new(".method public static #{functionSignature}#{localsAndStack}")
 
         if(assigningFunction)
           tree.children[1].setCode("")
@@ -834,14 +811,15 @@ def typeCheckKeyword(tree)
         
         if(tree.children.size == 4)
           @@currentLevel += 1
-          if(@@variableTable[@@currentLevel] == nil)
-            @@variableTable[@@currentLevel] = {}
-          end
+
+          @@variableTable[@@currentLevel] = {} if @@variableTable[@@currentLevel].nil?
+
           returnType = typeCheck(tree.children[3])
           @@variableTable.delete_at(@@currentLevel)
           @@currentLevel -= 1
           @@variableTable[@@currentLevel].delete(functionName)
-          if(returnType != nil)
+
+          unless returnType.nil?
             tree.children[3].setCode("pop")
           end
         end
@@ -861,27 +839,27 @@ def typeCheckWrite(tree)
     return nil
   end
   
-  if(tree.children[2].value == nil)
+  if tree.children[2].value.nil?
     typeToPrint = typeCheck(tree.children[2])
-    if(typeToPrint == nil)
+    if typeToPrint.nil?
       @@errorList << "Error: Statement to Print Returned Incorrect Type"
       return nil
     end
   else
     typeToPrint = tree.children[2].typeName
     ## Code to Load
-    if(@@symbolTable["Code"][typeToPrint] != nil)
+    unless @@symbolTable["Code"][typeToPrint].nil?
       value = @@symbolTable["Code"][typeToPrint]["Value"]
       code =  String.new(@@symbolTable["Code"][typeToPrint]["Code"])
-      if(value != nil)
-        ## SPECIAL BOOLEAN CASE
-        if(typeToPrint == "Boolean")
-          thisValue = tree.children[2].value == "true" ? 1 : 0
-          code.gsub!(/['X']/, thisValue.to_s)
-        else
-          code.gsub!(/['X']/, tree.children[2].value.to_s)
-        end
+
+      # Translate true value to numeric for special boolean case
+      if(typeToPrint == "Boolean")
+        thisValue = tree.children[2].value == "true" ? 1 : 0
+        code.gsub!(/['X']/, thisValue.to_s)
+      else
+        code.gsub!(/['X']/, tree.children[2].value.to_s)
       end
+
       tree.children[2].setCode(code)
     else
       if(tree.children[2].typeName == "Variable")
@@ -925,12 +903,8 @@ def typeCheckWrite(tree)
     code = boolCode
   end
 
-  if(tree.children[0].Code != nil)
-    newCode = tree.children[0].Code + "\n" + code
-  else
-    newCode = code
-  end
-  
+  newCode = tree.children[0].Code.nil? ? code : "#{tree.children[0].Code}\n#{code}"
+
   tree.children[0].setCode(newCode)
   tree.children[1].setCode("")
   return nil
@@ -940,14 +914,15 @@ end
 # and loops further up the tree until it can find the variable
 # returning nil if the variable is not found.
 def varCheck(node)
-	newCount = @@currentLevel
-	while(newCount >= 0)
-		if(@@variableTable[newCount] != nil)
-		  if(@@variableTable[newCount][node.value] != nil)
-		    return @@variableTable[newCount][node.value]
-	    end
-		end
-		newCount -= 1
-	end
-	return nil
+  newCount = @@currentLevel
+
+  until newCount < 0
+    unless @@variableTable[newCount].nil?
+      unless @@variableTable[newCount][node.value].nil?
+        return @@variableTable[newCount][node.value]
+      end
+    end
+    newCount -= 1
+  end
+  return nil
 end
