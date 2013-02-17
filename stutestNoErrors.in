@@ -1,5 +1,157 @@
 ; Testing
 
+[let [: string1 string] "hello"]
+[let [: string2 string] "joe"]
+[let [: easy int] -2]
+[let [: peasy int] 3]
+[+ easy peasy]
+
+[writestring stdout "[let [: stringTest string] \"Mark Funk\"]
+[:= stringTest [+ stringTest \" Testing\n\"]]
+[writestring stdout stringTest]"]
+
+[let [: stringTest string] "Mark Funk"]
+[:= stringTest [+ stringTest " Testing\n"]]
+[writestring stdout stringTest]
+
+[writestring stdout "Testing Associative Assignment"]
+[writestring stdout
+"[let [: a1 int] 1]
+[let [: a2 int] 2]
+[let [: a3 int] 3]
+[let [: a4 int] 4]
+[let [: a5 int] 5]
+[:= a1 [:= a2 [:= a3 [:= a4 a5]]]]
+[writeint stdout a1]"]
+
+[let [: a1 int] 1]
+[let [: a2 int] 2]
+[let [: a3 int] 3]
+[let [: a4 int] 4]
+[let [: a5 int] 5]
+[:= a1 [:= a2 [:= a3 [:= a4 a5]]]]
+[writeint stdout a1]
+
+
+[writestring stdout "Testing While Loops"]
+[writestring stdout "Print from 1 to 10(and for each number print 1 - 5)"]
+[writestring stdout "This tests nested variables to make sure they are reinstanced"]
+[let [: whileCount int] 1]
+[while [<= whileCount 10]
+  [
+    begin
+    [writeint stdout whileCount]
+    [let [: whileCount2 int] 1]
+    [while [<= whileCount2 5]
+      [
+        begin
+        [writeint stdout whileCount2]
+        [:= whileCount2 [+ whileCount2 1]]
+        end
+      ]
+    ]
+    [writestring stdout ""]
+    [:= whileCount [+ whileCount 1]]
+    end
+  ]
+]
+[writestring stdout "\nTo prove number isn't taken, will create int with name whileCount2 and print"]
+[let [: whileCount2 int] 1]
+[writeint stdout whileCount2]
+
+[writestring stdout "\nFibonacci Number Sequence until Number is greater than 50"]
+[let [: oldNumber int] 1]
+[let [: currentNumber int] 1]
+[let [: nextNumber int] 0]
+[while [< currentNumber 50]
+  [
+    begin
+    [writeint stdout currentNumber]
+    [:= nextNumber [+ currentNumber oldNumber]]
+    [:= oldNumber currentNumber]
+    [:= currentNumber nextNumber]
+    end
+  ]
+]
+
+[writestring stdout "\nIf Statement/BeginEnd Testing"]
+[writestring stdout "Checks if 1 < 2, if so prints out 10, 11 then adds them together(stored in variables)"]
+[writestring stdout "integer1 and integer2 are local to if clause integer3 and integer4 are local to else clause"]
+[if [< 1 2]
+  [
+    begin
+    [let [: integer1 int] 10]
+    [let [: integer2 int] 11]
+    [writeint stdout integer1]
+    [writeint stdout integer2]
+    [writeint stdout [+ integer1 integer2]]
+    end
+  ]
+  [
+    begin
+    [let [: integer3 int] 100]
+    [let [: integer4 int] 110]
+    [writeint stdout integer3]
+    [writeint stdout integer4]
+    [writeint stdout [+ integer3 integer4]]
+    end
+  ]
+]
+
+[writestring stdout "\nGlobal Testing and Using Variables in Let"]
+
+[writestring stdout "[let [: x int] [+ 1 2]]"] [let [: x int] [+ 1 2]]
+[writestring stdout "[writeint stdout x]"] [writeint stdout x]
+[writestring stdout "[:= x 1]"] [:= x 1]
+[writestring stdout "[let [: y int] [+ 1 x]]"] [let [: y int] [+ 1 x]]
+[writestring stdout "[writeint stdout x]"] [writeint stdout x]
+[writestring stdout "[writeint stdout y]"] [writeint stdout y]
+
+
+; Nested If
+[writestring stdout "\nNested If Testing"]
+[writestring stdout "The following sets the Global variable Z to be True"]
+[writestring stdout "Followed by a 4 argument let of Z(creates new instance) setting it to false"]
+[writestring stdout "Flow setting Z to False->True->False(in Begin/End clause)"]
+[writestring stdout "Afterwards outside of Let prints Z, gets global value of True\n"]
+[writestring stdout "[let [: z bool] true]
+[let [: z bool] false
+  [if [z]  ; Should be false
+    [writestring stdout \"First If True\"]
+    [let [: z bool] true
+      [if [z]  ; Should be true
+        [
+          begin
+          [writestring stdout \"Else, Second If True\"]
+          [let [: z bool] false]
+          end
+        ]
+        [writestring stdout \"Else, Second If False\"]
+      ]
+    ]
+  ]
+]
+[writebool stdout z] ; Should be true
+"]
+[let [: z bool] true]
+[let [: z bool] false
+    [if [z]  ; Should be false
+      [writestring stdout "First If True"]
+      [let [: z bool] true
+        [if [z]  ; Should be true
+          [
+            begin
+            [writestring stdout "Else, Second If True"]
+            [let [: z bool] false]
+            end
+          ]
+          [writestring stdout "Else, Second If False"]
+        ]
+      ]
+    ]
+]
+[writebool stdout z] ; Should be true
+
 ; Simple Case
 [writestring stdout "Simple Case - add function"]
 [let [: [add [: x int] [: y int]] int] 
