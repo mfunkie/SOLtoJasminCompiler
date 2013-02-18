@@ -338,7 +338,6 @@ def typeCheckWhile(tree)
   whileLabelY = @@labelCounter
   @@labelCounter += 1
   
-
   unless tree.children[1].value.nil?
     @@errorList << "Error: No Brackets around Boolean"
     @@errorList << "Correct Usage: while [bool or integer] [loop]"
