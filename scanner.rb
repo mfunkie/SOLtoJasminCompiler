@@ -97,7 +97,7 @@ def scanOperator(file,prev)
 
       pointer = pointer.chr
 
-      if pointer == ' ' || pointer == '[' || pointer == ']' || pointer == "\n"
+      if isTokenBreak(pointer)
         if pointer == '[' || pointer == ']'
           file.ungetc(pointer[0])
         end
@@ -118,7 +118,7 @@ def scanOperator(file,prev)
 
       pointer = pointer.chr
 
-      if pointer == ' ' || pointer == '[' || pointer == ']' || pointer == "\n"
+      if isTokenBreak(pointer)
 
         if pointer == '[' || pointer == ']'
           file.ungetc(pointer[0])
@@ -135,7 +135,7 @@ def scanOperator(file,prev)
 
         pointer = pointer.chr
 
-        if pointer == ' ' || pointer == '[' || pointer == ']' || pointer == "\n"
+        if isTokenBreak(pointer)
 
           if pointer == '[' || pointer == ']'
             file.ungetc(pointer[0])
@@ -152,18 +152,17 @@ def scanOperator(file,prev)
 
           pointer = pointer.chr
 
-          if pointer == ' ' || pointer == '[' || pointer == ']' || pointer == "\n"
-            if pointer == '[' || pointer == ']'
-              file.ungetc(pointer[0])
-            end
-            @@lineNumber += 1 if pointer == "\n"
-            return Token.new("Operator",currentOperator)
-            
-          else
+          unless isTokenBreak(pointer)
             currentOperator += pointer
             return unrecognizedTokenError(currentOperator)
           end
-
+          
+          if pointer == '[' || pointer == ']'
+            file.ungetc(pointer[0])
+          end
+          @@lineNumber += 1 if pointer == "\n"
+          return Token.new("Operator",currentOperator)
+          
         else
           currentOperator += pointer
           return unrecognizedTokenError(currentOperator)
@@ -176,7 +175,8 @@ def scanOperator(file,prev)
       pointer = file.getc
       return endOfFileError("Operator", currentOperator) if pointer.nil?
       pointer = pointer.chr
-      if pointer == ' ' || pointer == '[' || pointer == ']' || pointer == "\n"
+      
+      if isTokenBreak(pointer)
         if pointer == '[' || pointer == ']'
           file.ungetc(pointer[0])
         end
@@ -187,19 +187,24 @@ def scanOperator(file,prev)
         pointer = file.getc
         return endOfFileError("Operator", currentOperator) if pointer.nil?
         pointer = pointer.chr
-        if pointer == ' ' || pointer == '[' || pointer == ']' || pointer == "\n"
-          if pointer == '[' || pointer == ']'
-            file.ungetc(pointer[0])
-          end
-          @@lineNumber += 1 if pointer == "\n"
-          return Token.new("Operator",currentOperator)
-        else
-          return unrecognizedTokenErrorNumber(currentOperator, currentNumber)
+
+        unless isTokenBreak(pointer)
+          return unrecognizedTokenError(currentOperator)
         end
+
+        if pointer == '[' || pointer == ']'
+          file.ungetc(pointer[0])
+        end
+        @@lineNumber += 1 if pointer == "\n"
+        return Token.new("Operator",currentOperator)
       else
-          return unrecognizedTokenErrorNumber(currentOperator, currentNumber)
+          return unrecognizedTokenError(currentOperator)
       end
     end
+end
+
+def isTokenBreak(pointer)
+  return pointer == ' ' || pointer == '[' || pointer == ']' || pointer == "\n"
 end
 
 def endOfFileError(inType, currentOperator)
@@ -217,9 +222,9 @@ def unrecognizedTokenError(currentOperator)
   return Token.new("Operator", currentOperator)
 end
 
-def unrecognizedTokenErrorNumber(currentOperator, currentNumber)
-  @@errorList << "Line #{@@lineNumber.to_s}: Unrecognized Token : #{currentOperator}"
-  return Token.new("Operator", currentNumber)
+def unrecognizedTokenErrorByType(type, currentToken)
+  @@errorList << "Line #{@@lineNumber.to_s}: Unrecognized Token : #{currentToken}"
+  return Token.new(type, currentToken)
 end
 
 def scanName(file,prev)
@@ -238,22 +243,25 @@ def scanName(file,prev)
     return endOfFileError("Variable/Name", currentName) if pointer.nil?
     pointer = pointer.chr
   end
-  if(@@symbolTable[currentName] == nil)
+
+  if @@symbolTable[currentName].nil?
     ## Add to Symbol Table as variable
     @@symbolTable[currentName] = {"type"=>"Variable"}
     returnToken = Token.new("Variable", currentName)
   else
     returnToken = Token.new(@@symbolTable[currentName]["type"], currentName)
   end
-  if pointer == ' ' || pointer == '[' || pointer == ']' || pointer == "\n"
-    if pointer == '[' || pointer == ']'
-      file.ungetc(pointer[0])
-    end
-  else 
+
+  unless isTokenBreak(pointer)
     currentName += pointer
     @@errorList << "Line " + @@lineNumber.to_s + ": " + "Unrecognized Token : " + currentName
-  end  
-  return returnToken   
+  end
+
+  if pointer == '[' || pointer == ']'
+    file.ungetc(pointer[0])
+  end
+  
+  return returnToken
 end
 
 def scanNumber(file, prev)
@@ -272,15 +280,13 @@ def scanNumber(file, prev)
     pointer = pointer.chr
   end
 
-  if pointer == ' ' || pointer == '[' || pointer == ']'  || pointer == "\n"
+  if isTokenBreak(pointer)
 
     if pointer == '[' || pointer == ']'
       file.ungetc(pointer[0])
     end
 
-    if(pointer == "\n")
-      @@lineNumber += 1
-    end
+    @@lineNumber += 1 if pointer == "\n"
 
     thisToken = Token.new("Integer", currentNumber)
     if(thisToken.value > 2147483647)  #Max Integer Size, we'll convert to Float
@@ -291,8 +297,7 @@ def scanNumber(file, prev)
   elsif pointer != '.' #&& pointer != 'e' && pointer != 'E'
 
     currentNumber += pointer
-    @@errorList << "Line " + @@lineNumber.to_s + ": " + "Unrecognized Token : " + currentNumber
-    return Token.new("Integer", currentNumber)
+    return unrecognizedTokenErrorByType("Integer", currentNumber)
   end
 
   ##### END INTEGER STATE #####
@@ -313,28 +318,27 @@ def scanNumber(file, prev)
     pointer = pointer.chr
   else
     currentNumber += pointer
-    @@errorList << "Line " + @@lineNumber.to_s + ": " + "Unrecognized Token : " + currentNumber
-    return Token.new("Float", currentNumber)
+    return unrecognizedTokenErrorByType("Float", currentNumber)
   end
 
   eFlag = false
   while pointer == "0"  || (pointer.to_i > 0 && pointer.to_i <= 9) || pointer == 'e' || pointer == 'E'
     currentNumber += pointer
     if pointer == 'e' || pointer == 'E'
-      if eFlag == false
-        eFlag = true
-        pointer = file.getc
-        return endOfFileError("Float", currentNumber) if pointer.nil?
-        pointer = pointer.chr
-        if pointer == '+' || pointer == '-'
-          currentNumber += pointer
-        else
-          file.ungetc(pointer[0])
-        end
-      else
+      if eFlag
         # There was already an 'e' token in this float
-        @@errorList << "Line " + @@lineNumber.to_s + ": " + "Unrecognized Token : " + currentNumber
-        return Token.new("Float", currentNumber)
+        return unrecognizedTokenErrorByType("Float", currentNumber)
+      end
+      
+      eFlag = true
+      pointer = file.getc
+      return endOfFileError("Float", currentNumber) if pointer.nil?
+      pointer = pointer.chr
+
+      if pointer == '+' || pointer == '-'
+        currentNumber += pointer
+      else
+        file.ungetc(pointer[0])
       end
     end
 
@@ -343,17 +347,16 @@ def scanNumber(file, prev)
     pointer = pointer.chr
   end
 
-  if pointer == ' ' || pointer == '[' || pointer == ']' || pointer == "\n"
+  if isTokenBreak(pointer)
     if pointer == '[' || pointer == ']'
       file.ungetc(pointer[0])
     end
 
     @@lineNumber += 1 if pointer == "\n"
-    return Token.new("Float",currentNumber)
+    return Token.new("Float", currentNumber)
   else
     currentNumber += pointer
-    @@errorList << "Line " + @@lineNumber.to_s + ": " + "Unrecognized Token : " + currentNumber
-    return Token.new("Float", currentNumber)
+    return unrecognizedTokenErrorByType("Float", currentNumber)
   end
   ##### END FLOAT STATE #####
 end
@@ -379,9 +382,7 @@ def scanString(file)
       backtypes = {"a"=>7,"b"=>8,"f"=>12,"n"=>10,"r"=>13,"t"=>9,"v"=>11,"\\"=>92,"0"=>0}
 
       if backtypes[pointer] != nil
-        if backtypes[pointer] == 10
-          @@lineNumber += 1
-        end
+        @@lineNumber += 1 if backtypes[pointer] == 10
         currentString += backtypes[pointer].chr
       else
         currentString += "\\" + pointer
@@ -403,16 +404,14 @@ def scanString(file)
 
   pointer = pointer.chr
 
-  if pointer != " " && pointer != "[" && pointer != "]" && pointer != "\n"
+  unless isTokenBreak(pointer)
     currentString += pointer
     @@errorList << "Line " + @@lineNumber.to_s + ": " + "Syntax : Invalid String : " + currentString
-    thisToken = Token.new("String", currentString)
-    return thisToken
+    return Token.new("String", currentString)
   else
     if pointer == "[" || pointer == "]"
       file.ungetc(pointer[0])
     end
-    thisToken = Token.new("String",currentString)
-    return thisToken
+    return Token.new("String",currentString)
   end  
 end

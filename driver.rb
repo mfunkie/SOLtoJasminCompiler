@@ -4,7 +4,7 @@ require './typecheck'
 require './codeGen'
 
 def printPreTraversalTreeTypes(spaces, tree)
-  if tree.value == nil
+  if tree.value.nil?
     tree.children.each { |child| printPreTraversalTreeTypes(spaces+2, child) }
   else
     numSpaces = "-"*spaces
@@ -13,7 +13,7 @@ def printPreTraversalTreeTypes(spaces, tree)
 end
 
 def printPreTraversalTree(spaces, tree)
-  if tree.value == nil
+  if tree.value.nil?
     tree.children.each { |child| printPreTraversalTree(spaces+2, child) }
   else
     numSpaces = "-"*spaces
@@ -23,7 +23,7 @@ end
 
 def printStatement(tree)
   statement = ""
-  if tree.value == nil
+  if tree.value.nil?
     statement += "["
     tree.children.each { |child| 
       statement += printStatement(child) 
@@ -36,7 +36,7 @@ def printStatement(tree)
 end
 
 def treeSize(tree)
-  if tree.value == nil
+  if tree.value.nil?
     tree.children.each { |child| treeSize(child) }
   else
     @@stackSize += 1
@@ -62,9 +62,7 @@ def driver()
         treeSize(tree)
       else
         puts "There were some errors in statement " + printStatement(tree)
-        @@errorList.each{ |error|
-          puts error + "\n"
-        }
+        @@errorList.each { |error| puts error + "\n" }
         puts "\n"
       end
       @@errorList = []

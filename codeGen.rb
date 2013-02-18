@@ -30,7 +30,6 @@ def generateLetCode(tree)
   end
 
   addTreeChildCode(tree, 2) unless tree.children[2].Code.nil?
-
   addTreeChildCode(tree, 1)
 
   if(tree.children.size == 4)
