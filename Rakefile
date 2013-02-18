@@ -4,7 +4,8 @@ task :clean do
     rm_f Dir.glob("*.j")
     rm_f Dir.glob("*.out")
     rm_f Dir.glob("*.class")
-    sh "ls"
+    rm_f Dir.glob("*~")
+    sh "ls -G"
 end
 
 task :verifyJasmin do
