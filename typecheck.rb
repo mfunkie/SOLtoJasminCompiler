@@ -66,7 +66,7 @@ def typeCheck(tree)
 
         type = codeAndType["type"]
 
-        if(codeAndType["loadCode"] == nil)
+        if codeAndType["loadCode"].nil?
           if(tree.children[0].value == ":=")
             # Bide our time, no code needs to be made
             type = "Function"
@@ -119,6 +119,7 @@ def typeCheck(tree)
     end
   end
 
+  # If we've made it to here, we know that this is supposed to be a Function
   if(tree.children[0].typeName == "Variable")
     thisFunction = varCheck(tree.children[0])
     
