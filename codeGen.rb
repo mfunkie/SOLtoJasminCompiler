@@ -1,6 +1,6 @@
 def generateCode(tree)
 
-  if(tree.value == nil && tree.children[0] == nil)
+  if tree.value.nil? && tree.children[0].nil?
     return
   end
   
@@ -13,49 +13,35 @@ def generateCode(tree)
     return
   end
 
-  i = 1
-  while(i < tree.children.size())
-    if(tree.children[i].value == nil)
-      generateCode(tree.children[i]) 
-      if(tree.children[i].Code != nil)
-        code = "\t" + tree.children[i].Code
-        @@code << code
-      end
-    else
-      code = "\t" + tree.children[i].Code
-      @@code << code
-    end
-    i += 1
+  tree.children.each_index do |i|
+    next if i == 0
+    generateCode(tree.children[i]) if tree.children[i].value.nil?
+    addTreeChildCode(tree, i) unless tree.children[i].Code.nil?
   end
-  if(tree.children[0].value == "while")
-    generateWhileCode(tree.children[1]) 
-  end
-  code = "\t" + tree.children[0].Code
-  @@code << code
+
+  generateWhileCode(tree.children[1]) if tree.children[0].value == "while"
+     
+  addTreeChildCode(tree, 0)
 end
 
 def generateLetCode(tree)
   if(tree.children[2].value == nil)
     generateCode(tree.children[2]) 
   end
-  if(tree.children[2].Code != nil)
-    code = "\t" + tree.children[2].Code
-    @@code << code
-  end
-  code = "\t" + tree.children[1].Code
-  @@code << code
+
+  addTreeChildCode(tree, 2) unless tree.children[2].Code.nil?
+
+  addTreeChildCode(tree, 1)
+
   if(tree.children.size == 4)
     generateCode(tree.children[3])
-    if(tree.children[3].Code != nil)
-      code = "\t" + tree.children[3].Code
-      @@code << code
-    end
+    addTreeChildCode(tree, 3) unless tree.children[3].Code != nil
   end
 end
 
 def generateFunctionCode(tree) #goes node 1 code, node 2 code, then node 0 code, then add it to @@codeAfter
 
-  thisMethodCode = "\n"+tree.children[1].Code
+  thisMethodCode = "\n#{tree.children[1].Code}"
 
   if(tree.children[2].value == nil)
     oldCode = Array.new(@@code)
@@ -69,16 +55,14 @@ def generateFunctionCode(tree) #goes node 1 code, node 2 code, then node 0 code,
   end
 
   unless tree.children[2].Code.nil?
-    code = "\n\t" + tree.children[2].Code
-    thisMethodCode << code
+    thisMethodCode << "\n\t#{tree.children[2].Code}"
   end
 
   thisMethodCode << tree.children[0].Code
   if(tree.children.size == 4)
     generateCode(tree.children[3])
     if(tree.children[3].Code != nil)
-      code = "\t" + tree.children[3].Code
-      @@code << code
+      addTreeChildCode(tree, 3)
     end
   end
   @@prologue << thisMethodCode
@@ -90,33 +74,19 @@ def generateWhileCode(tree)
     return
   end
 
-  i = 1
-
-  while(i < tree.children.size())
-
-    if(tree.children[i].value == nil)
-      generateCode(tree.children[i]) 
-      if(tree.children[i].Code != nil)
-        code = "\t" + tree.children[i].Code
-        @@code << code
-      end
-    else
-      code = "\t" + tree.children[i].Code
-      @@code << code
-    end
-    i += 1
+  tree.children.each_index do |i|
+    next if i == 0
+    generateCode(tree.children[i]) if tree.children[i].value.nil?
+    addTreeChildCode(tree, i) unless tree.children[i].Code.nil?
   end
 
-  if(tree.children[0].value == "while")
-    generateWhileCode(tree.children[1]) 
-  end
-  
+  generateWhileCode(tree.children[1]) if tree.children[0].value == "while"
+
   if(tree.children.size != 1)
-    code = String.new("\t" + tree.children[0].Code)
+    code = "\t#{tree.children[0].Code}"
     #Some crazy hacks goin on to get rid of the rest of the label code
-    if(code.index("label") == nil) # We're working with an integer
-      code = String.new(code + "\n\t" +  tree.Code)
-    end
+    code = "#{code}\n\t#{tree.Code}" if code.index("label").nil? # We're working with an integer
+
     newCode = code.slice(0..code.index("label")+4)
     restOfLabel = code.slice(code.index("label")+5..-1)
     restOfLabel.slice!(restOfLabel.index("\n")..-1)
@@ -129,6 +99,10 @@ def generateWhileCode(tree)
     moreCode.slice!(tree.Code.lstrip.index("\n")+1..-1)
     @@code << moreCode
   end
+end
+
+def addTreeChildCode(tree, child_index)
+  @@code << "\t#{tree.children[child_index].Code}"
 end
 
 def createJasminFile()
