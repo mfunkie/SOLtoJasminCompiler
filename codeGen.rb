@@ -25,7 +25,7 @@ def generateCode(tree)
 end
 
 def generateLetCode(tree)
-  if(tree.children[2].value == nil)
+  if tree.children[2].value.nil?
     generateCode(tree.children[2]) 
   end
 
@@ -34,7 +34,7 @@ def generateLetCode(tree)
 
   if(tree.children.size == 4)
     generateCode(tree.children[3])
-    addTreeChildCode(tree, 3) unless tree.children[3].Code != nil
+    addTreeChildCode(tree, 3) unless tree.children[3].Code.nil?
   end
 end
 
@@ -42,7 +42,12 @@ def generateFunctionCode(tree) #goes node 1 code, node 2 code, then node 0 code,
 
   thisMethodCode = "\n#{tree.children[1].Code}"
 
-  if(tree.children[2].value == nil)
+  if tree.children[2].value.nil?
+    # Store old code so that we can reset it after we "generateCode"
+    # on the third child, because that will add code to @@code
+    # that we will want to add to the prologue instead of the current
+    # place in code.
+
     oldCode = Array.new(@@code)
     @@code = [""]
     generateCode(tree.children[2]) 
@@ -60,16 +65,14 @@ def generateFunctionCode(tree) #goes node 1 code, node 2 code, then node 0 code,
   thisMethodCode << tree.children[0].Code
   if(tree.children.size == 4)
     generateCode(tree.children[3])
-    if(tree.children[3].Code != nil)
-      addTreeChildCode(tree, 3)
-    end
+    addTreeChildCode(tree, 3) unless tree.children[3].Code.nil?
   end
   @@prologue << thisMethodCode
 end
 
 def generateWhileCode(tree)
 
-  if(tree.value == nil && tree.children[0] == nil)
+  if tree.value.nil? && tree.children[0].nil?
     return
   end
 
@@ -93,7 +96,7 @@ def generateWhileCode(tree)
     @@code << newCode
   else(tree.typeName == "Boolean")
     #More Crazy Hacks
-    @@code << "\t" + tree.children[0].Code
+    addTreeChildCode(tree, 0)
     moreCode = String.new("\t" + tree.Code.lstrip)
     moreCode.slice!(tree.Code.lstrip.index("\n")+1..-1)
     @@code << moreCode
